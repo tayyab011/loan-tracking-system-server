@@ -59,7 +59,6 @@ async function run() {
     const loanApplicationCollection = db.collection("loanApplications");
     const paymentCollection = db.collection("payments");
 
-
     //1 users
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -72,22 +71,36 @@ async function run() {
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
- //2 user role get
-  app.get("/users/:email/role", async (req, res) => {
-    const email = req.params.email;
-    const query = { email: email };
-    const user = await userCollection.findOne(query);
-    res.send({ role: user?.role });
-  });
+    //2 user role get
+    app.get("/users/:email/role", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      res.send({ role: user?.role });
+    });
 
+    //3 loan add from manager
+    app.post("/loans", async (req, res) => {
+      const loans = req.body;
+      const result = await loanCollection.insertOne(loans);
+      res.send(result);
+    });
+    //4 manage loan from manager
+    app.get("/loans", async (req, res) => {
+      const result = await loanCollection.find().toArray();
+      res.send(result);
+    });
 
-  //3 loan add from manager
-  app.post("/loans",async(req,res)=>{
-    const loans=req.body;
-    const result =await loanCollection.insertOne(loans);
-    res.send(result)
-
-  })
+    //5 manage loan from manager update
+    app.put("/loans/:id", async (req, res) => {
+      const id=req.params.id
+      const updateLoan=req.body
+      const query={_id: new ObjectId(id)}
+      const result = await loanCollection.updateOne(query, {
+        $set: updateLoan,
+      });
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
