@@ -55,9 +55,12 @@ async function run() {
 
     const db = client.db("loanManagement");
     const userCollection = db.collection("users");
+    const loanCollection = db.collection("loans");
+    const loanApplicationCollection = db.collection("loanApplications");
+    const paymentCollection = db.collection("payments");
 
 
-    //users
+    //1 users
     app.post("/users", async (req, res) => {
       const user = req.body;
 
@@ -69,6 +72,22 @@ async function run() {
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
+ //2 user role get
+  app.get("/users/:email/role", async (req, res) => {
+    const email = req.params.email;
+    const query = { email: email };
+    const user = await userCollection.findOne(query);
+    res.send({ role: user?.role });
+  });
+
+
+  //3 loan add from manager
+  app.post("/loans",async(req,res)=>{
+    const loans=req.body;
+    const result =await loanCollection.insertOne(loans);
+    res.send(result)
+
+  })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
