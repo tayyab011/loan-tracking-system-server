@@ -125,22 +125,24 @@ async function run() {
       const result = await loanApplicationCollection.insertOne(loans);
       res.send(result);
     });
-
+// 9 my loan application form
      app.get(
        "/loan-application-form",
        firebaseMiddleware,
        async (req, res) => {
         const email=req.query.email;
+    
         const query={}
         if (email) {
           query.borrowerEmail=email
         }
+       
         /*  console.log(req.decoded_email); */
          const result = await loanApplicationCollection.find(query).toArray();
          res.send(result);
        }
      );
-
+// 10 / cancellation my lon from borrower
       app.put(
         "/loan-application-form/status-canceled/:id",
         firebaseMiddleware,
@@ -160,6 +162,47 @@ async function run() {
           res.send(result);
         }
       );
+
+      //11 from manager see penidng loan
+       app.get(
+         "/loan-application-pendingform",
+         
+         async (req, res) => {
+           const status = req.query.status;
+
+           const query = {};
+           if (status) {
+             query.status = status;
+           }
+
+           /*  console.log(req.decoded_email); */
+           const result = await loanApplicationCollection.find(query).toArray();
+           res.send(result);
+         }
+       );
+
+       //12 approved or rejected from manager
+       app.put(
+         "/loan-application-form-manager/:id",
+         firebaseMiddleware,
+         async (req, res) => {
+           const { status } = req.body;
+           console.log(status);
+           const id = req.params.id;
+           const query = { _id: new ObjectId(id) };
+           const updateStatus = {
+             $set: {
+               status,
+             },
+           };
+
+           const result = await loanApplicationCollection.updateOne(
+             query,
+             updateStatus
+           );
+           res.send(result);
+         }
+       );
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
