@@ -121,11 +121,45 @@ async function run() {
     //8 loan application form for user/borrower
     app.post("/loan-application-form",firebaseMiddleware, async (req, res) => {
       const loans = req.body;
-   console.log(req.decoded_email);
+  /*  console.log(req.decoded_email); */
       const result = await loanApplicationCollection.insertOne(loans);
       res.send(result);
     });
 
+     app.get(
+       "/loan-application-form",
+       firebaseMiddleware,
+       async (req, res) => {
+        const email=req.query.email;
+        const query={}
+        if (email) {
+          query.borrowerEmail=email
+        }
+        /*  console.log(req.decoded_email); */
+         const result = await loanApplicationCollection.find(query).toArray();
+         res.send(result);
+       }
+     );
+
+      app.put(
+        "/loan-application-form/status-canceled/:id",
+        firebaseMiddleware,
+        async (req, res) => {
+         const id=req.params.id;
+         const query ={_id: new ObjectId(id)};
+         const updateCanceled = {
+           $set: {
+             status:"canceled"
+           },
+         };
+        
+          const result = await loanApplicationCollection.updateOne(
+            query,
+            updateCanceled
+          );
+          res.send(result);
+        }
+      );
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
