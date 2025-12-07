@@ -116,9 +116,10 @@ async function run() {
     });
 
     //8 loan application form for user/borrower
-    app.post("/loans", async (req, res) => {
+    app.post("/loan-application-form", async (req, res) => {
       const loans = req.body;
-      const result = await loanCollection.insertOne(loans);
+   
+      const result = await loanApplicationCollection.insertOne(loans);
       res.send(result);
     });
 
