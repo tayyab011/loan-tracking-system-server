@@ -93,12 +93,32 @@ async function run() {
 
     //5 manage loan from manager update
     app.put("/loans/:id", async (req, res) => {
-      const id=req.params.id
-      const updateLoan=req.body
-      const query={_id: new ObjectId(id)}
+      const id = req.params.id;
+      const updateLoan = req.body;
+      const query = { _id: new ObjectId(id) };
       const result = await loanCollection.updateOne(query, {
         $set: updateLoan,
       });
+      res.send(result);
+    });
+    //6 manage loan from manager delete
+    app.delete("/loans/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await loanCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    //7 all loan for user
+    app.get("/all-loans", async (req, res) => {
+      const result = await loanCollection.find().toArray();
+      res.send(result);
+    });
+
+    //8 loan application form for user/borrower
+    app.post("/loans", async (req, res) => {
+      const loans = req.body;
+      const result = await loanCollection.insertOne(loans);
       res.send(result);
     });
 
