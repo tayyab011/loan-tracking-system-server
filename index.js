@@ -2,14 +2,14 @@ import express from "express";
 import cors from "cors";
 import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
 import crypto from "crypto";
+import  admin from"firebase-admin";
+const serviceAccount = "./loan.json";
 /* import Stripe from "stripe"; */
 import dotenv from "dotenv";
 dotenv.config();
 /* const stripe = new Stripe(process.env.stripe_secret); */
 const app = express();
 
-//loanmanagementsystem
-//gZJS8S507UEflGQE
 
 //middleware
 app.use(cors());
@@ -25,17 +25,20 @@ const client = new MongoClient(process.env.uri, {
   },
 });
 
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
 
 
 
 
-/* const firebaseMiddleware = async (req, res, next) => {
+ const firebaseMiddleware = async (req, res, next) => {
   const auth = req.headers.authorization;
 
   if (!auth) {
     return res.status(401).send({ message: "unauthorized access" });
   }
-
+console.log(auth)
   try {
     const token = req.headers.authorization.split(" ")[1];
    
@@ -48,7 +51,7 @@ const client = new MongoClient(process.env.uri, {
     return res.status(401).send({ message: "unauthorized access" });
   }
 };
- */
+ 
 async function run() {
   try {
     await client.connect();
@@ -92,7 +95,7 @@ async function run() {
     });
 
     //5 manage loan from manager update
-    app.put("/loans/:id", async (req, res) => {
+    app.put("/loans/:id",firebaseMiddleware, async (req, res) => {
       const id = req.params.id;
       const updateLoan = req.body;
       const query = { _id: new ObjectId(id) };
@@ -102,7 +105,7 @@ async function run() {
       res.send(result);
     });
     //6 manage loan from manager delete
-    app.delete("/loans/:id", async (req, res) => {
+    app.delete("/loans/:id",firebaseMiddleware, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await loanCollection.deleteOne(query);
@@ -116,9 +119,9 @@ async function run() {
     });
 
     //8 loan application form for user/borrower
-    app.post("/loan-application-form", async (req, res) => {
+    app.post("/loan-application-form",firebaseMiddleware, async (req, res) => {
       const loans = req.body;
-   
+   console.log(req.decoded_email);
       const result = await loanApplicationCollection.insertOne(loans);
       res.send(result);
     });
