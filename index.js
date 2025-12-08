@@ -2,14 +2,13 @@ import express from "express";
 import cors from "cors";
 import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
 import crypto from "crypto";
-import  admin from"firebase-admin";
+import admin from "firebase-admin";
 const serviceAccount = "./loan.json";
 /* import Stripe from "stripe"; */
 import dotenv from "dotenv";
 dotenv.config();
 /* const stripe = new Stripe(process.env.stripe_secret); */
 const app = express();
-
 
 //middleware
 app.use(cors());
@@ -29,29 +28,26 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
-
-
-
- const firebaseMiddleware = async (req, res, next) => {
+const firebaseMiddleware = async (req, res, next) => {
   const auth = req.headers.authorization;
 
   if (!auth) {
     return res.status(401).send({ message: "unauthorized access" });
   }
-console.log(auth)
+  console.log(auth);
   try {
     const token = req.headers.authorization.split(" ")[1];
-   
+
     const decoded = await admin.auth().verifyIdToken(token);
     console.log(decoded);
-   
+
     req.decoded_email = decoded.email;
     next();
   } catch (error) {
     return res.status(401).send({ message: "unauthorized access" });
   }
 };
- 
+
 async function run() {
   try {
     await client.connect();
@@ -83,19 +79,19 @@ async function run() {
     });
 
     //3 loan add from manager
-    app.post("/loans", async (req, res) => {
+    app.post("/loans", firebaseMiddleware, async (req, res) => {
       const loans = req.body;
       const result = await loanCollection.insertOne(loans);
       res.send(result);
     });
     //4 manage loan from manager
-    app.get("/loans", async (req, res) => {
+    app.get("/loans", firebaseMiddleware, async (req, res) => {
       const result = await loanCollection.find().toArray();
       res.send(result);
     });
 
     //5 manage loan from manager update
-    app.put("/loans/:id",firebaseMiddleware, async (req, res) => {
+    app.put("/loans/:id", firebaseMiddleware, async (req, res) => {
       const id = req.params.id;
       const updateLoan = req.body;
       const query = { _id: new ObjectId(id) };
@@ -105,7 +101,7 @@ async function run() {
       res.send(result);
     });
     //6 manage loan from manager delete
-    app.delete("/loans/:id",firebaseMiddleware, async (req, res) => {
+    app.delete("/loans/:id", firebaseMiddleware, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await loanCollection.deleteOne(query);
@@ -119,90 +115,133 @@ async function run() {
     });
 
     //8 loan application form for user/borrower
-    app.post("/loan-application-form",firebaseMiddleware, async (req, res) => {
+    app.post("/loan-application-form", firebaseMiddleware, async (req, res) => {
       const loans = req.body;
-  /*  console.log(req.decoded_email); */
+      /*  console.log(req.decoded_email); */
       const result = await loanApplicationCollection.insertOne(loans);
       res.send(result);
     });
-// 9 my loan application form
-     app.get(
-       "/loan-application-form",
-       firebaseMiddleware,
-       async (req, res) => {
-        const email=req.query.email;
-    
-        const query={}
-        if (email) {
-          query.borrowerEmail=email
+    // 9 my loan application form
+    app.get("/loan-application-form", firebaseMiddleware, async (req, res) => {
+      const email = req.query.email;
+
+      const query = {};
+      if (email) {
+        query.borrowerEmail = email;
+      }
+
+      /*  console.log(req.decoded_email); */
+      const result = await loanApplicationCollection.find(query).toArray();
+      res.send(result);
+    });
+    // 10 / cancellation my lon from borrower
+    app.put(
+      "/loan-application-form/status-canceled/:id",
+      firebaseMiddleware,
+      async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const updateCanceled = {
+          $set: {
+            status: "canceled",
+          },
+        };
+
+        const result = await loanApplicationCollection.updateOne(
+          query,
+          updateCanceled
+        );
+        res.send(result);
+      }
+    );
+
+    //11 from manager see penidng loan
+    app.get(
+      "/loan-application-pendingform",
+      firebaseMiddleware,
+      async (req, res) => {
+        const status = req.query.status;
+
+        const query = {};
+        if (status) {
+          query.status = status;
         }
-       
+
         /*  console.log(req.decoded_email); */
-         const result = await loanApplicationCollection.find(query).toArray();
-         res.send(result);
-       }
-     );
-// 10 / cancellation my lon from borrower
-      app.put(
-        "/loan-application-form/status-canceled/:id",
-        firebaseMiddleware,
-        async (req, res) => {
-         const id=req.params.id;
-         const query ={_id: new ObjectId(id)};
-         const updateCanceled = {
-           $set: {
-             status:"canceled"
-           },
-         };
-        
-          const result = await loanApplicationCollection.updateOne(
-            query,
-            updateCanceled
-          );
-          res.send(result);
-        }
-      );
+        const result = await loanApplicationCollection.find(query).toArray();
+        res.send(result);
+      }
+    );
 
-      //11 from manager see penidng loan
-       app.get(
-         "/loan-application-pendingform",
-         
-         async (req, res) => {
-           const status = req.query.status;
+    //12 approved or rejected from manager
+    app.put(
+      "/loan-application-form-manager/:id",
+      firebaseMiddleware,
+      async (req, res) => {
+        const { status } = req.body;
+        console.log(status);
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const updateStatus = {
+          $set: {
+            status,
+          },
+        };
 
-           const query = {};
-           if (status) {
-             query.status = status;
-           }
+        const result = await loanApplicationCollection.updateOne(
+          query,
+          updateStatus
+        );
+        res.send(result);
+      }
+    );
 
-           /*  console.log(req.decoded_email); */
-           const result = await loanApplicationCollection.find(query).toArray();
-           res.send(result);
-         }
-       );
+    //13 alluser manage
+    app.get("/users", firebaseMiddleware, async (req, res) => {
+      const user = await userCollection.find().toArray();
+      res.send(user);
+    });
+    //14  update role and status from admin
+    app.put("/users-manage/:id", firebaseMiddleware, async (req, res) => {
+      const id = req.params.id;
+      const { role, status } = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateUser = {
+        $set: {
+          role,
+          status,
+        },
+      };
+      console.log(role, status);
+      const result = await userCollection.updateOne(query, updateUser);
+      res.send(result);
+    });
+    //15 update show on home toggle from admin
+    app.put(
+      "/loan-admin-showonhome/:id",
+      firebaseMiddleware,
+      async (req, res) => {
+        const id = req.params.id;
+        const { showOnHome } = req.body;
+        console.log(showOnHome);
+        const query = { _id: new ObjectId(id) };
+        const updateUser = {
+          $set: {
+            showOnHome,
+          },
+        };
 
-       //12 approved or rejected from manager
-       app.put(
-         "/loan-application-form-manager/:id",
-         firebaseMiddleware,
-         async (req, res) => {
-           const { status } = req.body;
-           console.log(status);
-           const id = req.params.id;
-           const query = { _id: new ObjectId(id) };
-           const updateStatus = {
-             $set: {
-               status,
-             },
-           };
-
-           const result = await loanApplicationCollection.updateOne(
-             query,
-             updateStatus
-           );
-           res.send(result);
-         }
-       );
+        const result = await loanCollection.updateOne(query, updateUser);
+        res.send(result);
+      }
+    );
+    //16
+    app.delete("/loansDelete/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await loanCollection.deleteOne(query);
+      res.send(result);
+    });
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
