@@ -4,10 +4,10 @@ import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
 import crypto from "crypto";
 import admin from "firebase-admin";
 const serviceAccount = "./loan.json";
-/* import Stripe from "stripe"; */
+import Stripe from "stripe";
 import dotenv from "dotenv";
 dotenv.config();
-/* const stripe = new Stripe(process.env.stripe_secret); */
+const stripe = new Stripe(process.env.stripe_secret);
 const app = express();
 
 //middleware
@@ -34,12 +34,12 @@ const firebaseMiddleware = async (req, res, next) => {
   if (!auth) {
     return res.status(401).send({ message: "unauthorized access" });
   }
-  console.log(auth);
+  /*   console.log(auth); */
   try {
     const token = req.headers.authorization.split(" ")[1];
 
     const decoded = await admin.auth().verifyIdToken(token);
-    console.log(decoded);
+    /*    console.log(decoded); */
 
     req.decoded_email = decoded.email;
     next();
@@ -81,6 +81,7 @@ async function run() {
     //3 loan add from manager
     app.post("/loans", firebaseMiddleware, async (req, res) => {
       const loans = req.body;
+
       const result = await loanCollection.insertOne(loans);
       res.send(result);
     });
@@ -117,6 +118,7 @@ async function run() {
     //8 loan application form for user/borrower
     app.post("/loan-application-form", firebaseMiddleware, async (req, res) => {
       const loans = req.body;
+      loans.price = parseInt(10);
       /*  console.log(req.decoded_email); */
       const result = await loanApplicationCollection.insertOne(loans);
       res.send(result);
@@ -235,7 +237,7 @@ async function run() {
         res.send(result);
       }
     );
-    //16
+    //16 delete loan from admin
     app.delete("/loansDelete/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -253,23 +255,88 @@ async function run() {
       res.send(result);
     });
 
-    
     //18 home 6 card show
     app.get("/homes", async (req, res) => {
-      
-        let loans = await loanCollection
-          .find({ showOnHome: true })
-          .sort({ date: -1 })
-          .toArray();
+      let loans = await loanCollection
+        .find({ showOnHome: true })
+        .sort({ date: -1 })
+        .toArray();
 
-     
-     
-
- 
-        res.send(loans);
-     
+      res.send(loans);
     });
 
+    //19  payment checkout by borrower
+    app.post(
+      "/create-checkout-session",
+      firebaseMiddleware,
+      async (req, res) => {
+        const paymentInfo = req.body;
+       const session = await stripe.checkout.sessions.create({
+         //leftside
+         line_items: [
+           {
+             price_data: {
+               currency: "usd",
+               product_data: {
+                 name: paymentInfo.loanTitle,
+               },
+               unit_amount: paymentInfo.price * 100,
+             },
+             quantity: 1,
+           },
+         ],
+         //right side
+         customer_email: paymentInfo.borrowerEmail,
+         mode: "payment",
+         metadata: {
+           loanApplicationsId: paymentInfo.loanApplicationsId,
+           borrowerName: paymentInfo.borrowerName,
+           borrowerEmail: paymentInfo.borrowerEmail,
+           loanTitle: paymentInfo.loanTitle,
+         },
+         success_url: `${process.env.site_domain}/dashboard/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+         cancel_url: `${process.env.site_domain}/dashboard/payment-cancle`,
+       });  
+       res.send({url:session.url})
+      }
+    );
+
+
+    app.post("/payment-success",async(req,res)=>{
+      const {sessionId}=req.body
+     /*  console.log(sessionId);  3 bar session id pathay frontend theeke useeffect ;0*/
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      /*  console.log(session); */
+const loanApplication = await loanApplicationCollection.findOne({
+  _id: new ObjectId(session.metadata.loanApplicationsId),
+});
+const paymentExist = await paymentCollection.findOne({
+  transectionId: session.payment_intent,
+});
+if (paymentExist) {
+  return res.send({ transectionId: paymentExist.transectionId });
+}
+       if (session.status === "complete") {
+        const orderInfo = {
+          loanApplicationFormId: session.metadata.loanApplicationsId,
+          loanName: session.metadata.loanApplicationsId,
+          transectionId: session.payment_intent,
+          borrowerName: session.metadata.borrowerName,
+          borrowerEmail: session.metadata.borrowerEmail,
+          loanTitle: loanApplication.loanTitle,
+          price: session.amount_total / 100,
+        };
+        const result =await paymentCollection.insertOne(orderInfo);
+const updatePaidStatus = await loanApplicationCollection.updateOne(
+  {
+    _id: new ObjectId(session.metadata.loanApplicationsId),
+  },
+  { $set: { applicationFeeStatus :"paid"} }
+);
+return res.send(updatePaidStatus)
+       }
+       return res.send({message:"no"})
+    })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
