@@ -121,7 +121,7 @@ async function run() {
       const result = await loanApplicationCollection.insertOne(loans);
       res.send(result);
     });
-    // 9 my loan application form
+    // 9 my loan application form for (browwower (with query) and admin(with out query))
     app.get("/loan-application-form", firebaseMiddleware, async (req, res) => {
       const email = req.query.email;
 
@@ -242,6 +242,34 @@ async function run() {
       const result = await loanCollection.deleteOne(query);
       res.send(result);
     });
+    //17
+    app.get("/users/profile", firebaseMiddleware, async (req, res) => {
+      const { email } = req.query;
+      const query = {};
+      if (email) {
+        query.email = email;
+      }
+      const result = await userCollection.findOne(query);
+      res.send(result);
+    });
+
+    
+    //18 home 6 card show
+    app.get("/homes", async (req, res) => {
+      
+        let loans = await loanCollection
+          .find({ showOnHome: true })
+          .sort({ date: -1 })
+          .toArray();
+
+     
+     
+
+ 
+        res.send(loans);
+     
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
