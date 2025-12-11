@@ -3,7 +3,11 @@ import cors from "cors";
 import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
 import crypto from "crypto";
 import admin from "firebase-admin";
-const serviceAccount = "./loan.json";
+/* const serviceAccount = "./loan.json"; */
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, "base64").toString(
+  "utf8"
+);
+const serviceAccount = JSON.parse(decoded);
 import Stripe from "stripe";
 import dotenv from "dotenv";
 dotenv.config();
@@ -97,7 +101,20 @@ async function run() {
       const result = await loanCollection.find().toArray();
       res.send(result);
     });
+app.get("/loans/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const loan = await loanCollection.findOne({ _id: new ObjectId(id) });
 
+    if (!loan) {
+      return res.status(404).send({ message: "Loan not found" });
+    }
+
+    res.send(loan);
+  } catch (error) {
+    res.status(500).send({ message: "Invalid loan ID" });
+  }
+});
     //5 manage loan from manager update
     app.put("/loans/:id", firebaseMiddleware, async (req, res) => {
       const id = req.params.id;
@@ -361,10 +378,10 @@ return res.send(updatePaidStatus)
        return res.send({message:"no"})
     })
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+   /*  await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    ); */
   } finally {
     // Ensures that the client will close when you finish/error
     /*    await client.close(); */
