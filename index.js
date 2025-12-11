@@ -78,6 +78,13 @@ async function run() {
       res.send({ role: user?.role });
     });
 
+    app.get("/user-suspend/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      res.send(user);
+    });
+
     //3 loan add from manager
     app.post("/loans", firebaseMiddleware, async (req, res) => {
       const loans = req.body;
@@ -110,10 +117,26 @@ async function run() {
     });
 
     //7 all loan for user
-    app.get("/all-loans", async (req, res) => {
+    /* app.get("/all-loans", async (req, res) => {
       const result = await loanCollection.find().toArray();
       res.send(result);
     });
+ */
+app.get("/all-loans", async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 6;
+  const skip = (page - 1) * limit;
+
+  const total = await loanCollection.countDocuments();
+  const loans = await loanCollection
+    .find()
+    .sort({ date: -1 }) // descending by date
+    .skip(skip)
+    .limit(limit)
+    .toArray();
+
+  res.send({ loans, total });
+});
 
     //8 loan application form for user/borrower
     app.post("/loan-application-form", firebaseMiddleware, async (req, res) => {
