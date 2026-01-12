@@ -147,7 +147,7 @@ app.get("/all-loans", async (req, res) => {
   const total = await loanCollection.countDocuments();
   const loans = await loanCollection
     .find()
-    .sort({ date: -1 }) // descending by date
+    .sort({ date: -1 }) 
     .skip(skip)
     .limit(limit)
     .toArray();
@@ -296,14 +296,15 @@ app.get("/all-loans", async (req, res) => {
     });
 
     //18 home 6 card show
-    app.get("/homes", async (req, res) => {
-      let loans = await loanCollection
-        .find({ showOnHome: true })
-        .sort({ date: -1 })
-        .toArray();
+   app.get("/homes", async (req, res) => {
+     const loans = await loanCollection
+       .find({ showOnHome: true })
+       .sort({ date: -1 }) 
+       .limit(6) 
+       .toArray();
 
-      res.send(loans);
-    });
+     res.send(loans);
+   });
 
     //19  payment checkout by borrower
     app.post(
