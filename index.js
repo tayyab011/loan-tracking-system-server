@@ -154,7 +154,15 @@ app.get("/all-loans", async (req, res) => {
 
   res.send({ loans, total });
 });
+//for admin
+app.get("/all-loans-admin", async (req, res) => {
+  const loans = await loanCollection
+    .find()
+    .sort({ date: -1 })
+    .toArray();
 
+  res.send({ loans, total });
+});
     //8 loan application form for user/borrower
     app.post("/loan-application-form", firebaseMiddleware, async (req, res) => {
       const loans = req.body;
