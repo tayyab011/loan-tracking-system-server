@@ -226,7 +226,7 @@ app.get("/all-loans-admin", async (req, res) => {
       firebaseMiddleware,
       async (req, res) => {
         const { status } = req.body;
-        console.log(status);
+       /*  console.log(status); */
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
         const updateStatus = {
@@ -259,7 +259,7 @@ app.get("/all-loans-admin", async (req, res) => {
           status,
         },
       };
-      console.log(role, status);
+   /*    console.log(role, status); */
       const result = await userCollection.updateOne(query, updateUser);
       res.send(result);
     });
@@ -270,7 +270,7 @@ app.get("/all-loans-admin", async (req, res) => {
       async (req, res) => {
         const id = req.params.id;
         const { showOnHome } = req.body;
-        console.log(showOnHome);
+       /*  console.log(showOnHome); */
         const query = { _id: new ObjectId(id) };
         const updateUser = {
           $set: {
