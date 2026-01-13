@@ -54,7 +54,7 @@ const firebaseMiddleware = async (req, res, next) => {
 
 async function run() {
   try {
-    await client.connect();
+   /*  await client.connect(); */
 
     const db = client.db("loanManagement");
     const userCollection = db.collection("users");
